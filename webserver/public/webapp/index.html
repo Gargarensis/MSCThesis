@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+        crossorigin="anonymous">
+
+    <title>WebApp</title>
+    <meta name="author" content="Riccardo Gabriele">
+
+    <!-- JSON Viewer  -  https://www.cssscript.com/minimal-json-data-formatter-jsonviewer/ -->
+    <script src="lib/json-viewer/json-viewer.js"></script>
+    <link rel="stylesheet" href="lib/json-viewer/json-viewer.css">
+
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- syntax highlighter -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.52.0/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.52.0/mode/clike/clike.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.52.0/codemirror.min.css" />
+
+    
+    <link rel="stylesheet" href="http://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/default.min.css">
+    <script src="http://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+    <script src="http://cdn.jsdelivr.net/npm/highlightjs-line-numbers.js@2.7.0/dist/highlightjs-line-numbers.min.js"></script>
+    <script>hljs.initHighlightingOnLoad(); hljs.initLineNumbersOnLoad();</script>
+</head>
+
+<body>
+    <script src="scripts.js"></script>
+    <div id="main-container">
+        <div id="code-container"><pre id="main-code"><code class="java" id="code-text-container"></code></pre></div>
+        <div id="right-bar-container">
+            <div id="title"><p id="title-text"></p><span id="title-from"></span></div>
+            <div id="pattern-textbox-container" class="right-bar-element">
+                <div class="form-group">
+                    <label for="pattern-textarea" onclick="attemptToDocument();" style="cursor: pointer;">
+                        Pattern definition: <span id="requirements-check" class="requirements-ok" title="Requirements satisfied!">✓</span>
+                    </label>
+                    <textarea class="form-control" rows="14" id="pattern-textarea"></textarea>
+                </div>
+            </div>
+            <div id="preview-viewer" class="right-bar-element"></div>
+            <div id="controls-container" class="right-bar-element">
+                <div class="tab">
+                    <button class="tablinks" onclick="openTab(event, 'documentation-tab')">Android API</button>
+                    <button class="tablinks" onclick="openTab(event, 'single-line-patterns-tab')">Single-line patterns</button>
+                    <button class="tablinks" onclick="openTab(event, 'multi-line-patterns-tab')">Patterns</button>
+                </div>
+                
+                <!-- Tab content -->
+                <div id="documentation-tab" data-index="0" class="tabcontent">
+                    <span id="documentation-title">
+                        <span id="documentation-arrow-left" onclick="renderNextDocumentation(-1);">←</span>
+                        <span id="documentation-name">findViewById</span>
+                        <span id="documentation-arrow-right" onclick="renderNextDocumentation(1);">→</span>
+                    </span>
+                    <textarea class="form-control" rows="7" id="documentation-textarea"></textarea>
+                </div>
+                
+                <div id="single-line-patterns-tab" data-index="0" class="tabcontent">
+                    <span id="single-line-patterns-title">
+                        <span id="single-line-patterns-arrow-left" onclick="renderNextSingleLinePattern(-1);">←</span>
+                        <span id="single-line-patterns-id">Pattern #1</span>
+                        <span id="single-line-patterns-arrow-right" onclick="renderNextSingleLinePattern(1);">→</span>
+                    </span>
+                    <textarea class="form-control" rows="7" id="single-line-textarea"></textarea>
+                </div>
+                
+                <div id="multi-line-patterns-tab" data-index="0" class="tabcontent">
+                    <span id="multi-line-patterns-title">
+                        <span id="multi-line-patterns-arrow-left" onclick="renderNextMultiLinePattern(-1);">←</span>
+                        <span id="multi-line-patterns-id">Pattern #1</span>
+                        <span id="multi-line-patterns-arrow-right" onclick="renderNextMultiLinePattern(1);">→</span>
+                    </span>
+                    <textarea class="form-control" rows="7" id="multi-line-textarea"></textarea>
+                </div>
+            </div>
+        </div>
+        <div id="bottom-bar">
+            <div id="bottom-bar-right-container">
+                <div class="form-check" id="interruptions-form-check">
+                    <input type="checkbox" class="form-check-input" id="interruptions-checkbox">
+                    <label class="form-check-label" for="interruptions-checkbox">I've had interruptions</label>
+                </div>
+                <button type="button" class="btn btn-outline-dark btn-sm" id="bottom-bar-btn-cancel"
+                onclick="window.location = window.location.href.split('?')[0];">Skip</button>
+                <button type="button" class="btn btn-success btn-lg" id="bottom-bar-btn-submit"
+                    onclick="submitPattern();">Submit</button>
+            </div>
+            <button type="button" class="btn btn-outline-dark btn-sm" id="bottom-bar-btn-new-snippet" data-toggle="modal"
+                data-target="#new-snippet-modal">
+                New snippet from selected lines
+            </button>
+            <!-- <pre id="api-code"><code>void setView(View view, int viewSpacingLeft, int viewSpacingTop, int viewSpacingRight, int viewSpacingBottom)</code></pre>
+            <p id="api-description">Set the view to display in that dialog, specifying the spacing to appear around that view.</p> -->
+        </div>
+    </div>
+
+    <div id="jsonview-tree-store" style="display: none;"></div>
+
+
+    <div class="modal fade" id="new-snippet-modal" tabindex="-1" role="dialog" aria-labelledby="newSnippetModal"
+        aria-hidden="true">
+        <div class="modal-dialog" id="new-snippet-modal-container" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">New snippet</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form>
+                        <div class="form-check">
+                            <input onchange="updateNewSnippetModalArea(false);" class="form-check-input" type="radio" name="codeType" 
+                                id="new-snippet-maintain-code" value="option1" checked>
+                            <label class="form-check-label" for="maintainCode">
+                                Maintain the current method (the new snippet will be made from selected lines)
+                                <span id="new-snippet-code-line-numbers"></span>
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input onchange="updateNewSnippetModalArea(true);" class="form-check-input" type="radio" name="codeType" 
+                                id="new-snippet-new-code" value="option2">
+                            <label class="form-check-label" for="newCode">
+                                Create a new wrapper code (the new snippet will be made from the selected text in a wrapper class)
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label for="new-snippet-code" class="col-form-label">Code:</label>
+                            <textarea class="form-control" id="new-snippet-code" rows="10" disabled></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="sendNewSnippet();">Create new snippet</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="line-patterns-modal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="line-patterns-modal-title">Patterns for line </h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="line-patterns-modal-select">Compatible patterns:</label>
+                        <select class="form-control" id="line-patterns-modal-select"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="line-patterns-requirements-modal-text">Requirements:</label>
+                        <textarea class="form-control" id="line-patterns-requirements-modal-text" rows="6"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="line-patterns-modal-text">Result:</label>
+                        <textarea class="form-control" id="line-patterns-modal-text" rows="12"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" onclick="addPatternModalTextToDefinition();" data-dismiss="modal">Add to cursor</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modal-result" tabindex="-1" role="dialog"aria-hidden="true">
+        <div class="modal-dialog modal-lg" id="modal-result-window" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modal-result-title">Generated documentation</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <!-- <textarea class="form-control" id="modal-result-textarea" rows="30"></textarea> -->
+                    <div id="modal-result-textarea"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="multi-line-pattern-preview" class="no-show">
+        <a id="multi-line-pattern-container">Show pattern preview</a>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"
+        crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+        crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+        crossorigin="anonymous"></script>
+</body>
+
+</html>
