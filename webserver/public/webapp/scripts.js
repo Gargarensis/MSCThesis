@@ -1,4 +1,4 @@
-const SERVER_URL = "http://foo.inf.usi.ch:3000/"; // http://foo.inf.usi.ch:3000/
+const SERVER_URL = "http://localhost:3000/";
 const CSV_SEPARATOR = "█";
 
 let currentSnippet = null;
